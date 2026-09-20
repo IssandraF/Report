@@ -1,0 +1,42 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Car {
+  id          String        @id @default(uuid())
+  plateNumber String        @unique
+  brand       String
+  status      CarStatus     @default(ACTIVE)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  transactions Transaction[]
+}
+
+enum CarStatus {
+  ACTIVE
+  MAINTENANCE
+  INACTIVE
+}
+
+model Transaction {
+  id          String   @id @default(uuid())
+  carId       String
+  car         Car      @relation(fields: [carId], references: [id])
+  type        TxType
+  category    String
+  amount      Float
+  date        DateTime
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+enum TxType {
+  INCOME
+  EXPENSE
+}

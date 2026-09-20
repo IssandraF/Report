@@ -1,0 +1,957 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laporan Pemasukan & Pengeluaran Mobil</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Custom Scrollbar for better UI */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col">
+
+    <!-- Navigation Bar -->
+    <header class="bg-slate-900 text-white sticky top-0 z-50 shadow-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center space-x-3">
+                    <div class="bg-indigo-600 p-2 rounded-xl text-white">
+                        <i data-lucide="car" class="w-6 h-6"></i>
+                    </div>
+                    <div>
+                        <h1 class="font-bold text-lg leading-tight">FleetFinance</h1>
+                        <p class="text-xs text-slate-400">Laporan Keuangan & Operasional Mobil</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <button onclick="openModal('addCarModal')" class="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs sm:text-sm font-medium px-3 py-2 rounded-lg flex items-center space-x-1 border border-slate-700 transition">
+                        <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                        <span class="hidden sm:inline">Tambah Mobil</span>
+                    </button>
+                    <button onclick="openModal('addTransactionModal')" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm font-medium px-3 py-2 rounded-lg flex items-center space-x-1 shadow-sm transition">
+                        <i data-lucide="plus" class="w-4 h-4"></i>
+                        <span>Catat Transaksi</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+        <!-- Global Filter Bar -->
+        <section class="bg-white p-4 rounded-xl shadow-sm border border-slate-200/80 flex flex-col md:flex-row items-center justify-between gap-4">
+            <div class="flex items-center space-x-2 w-full md:w-auto">
+                <i data-lucide="filter" class="w-5 h-5 text-slate-400"></i>
+                <span class="font-semibold text-sm text-slate-700">Filter Utama:</span>
+            </div>
+            <div class="flex flex-wrap items-center gap-3 w-full md:w-auto">
+                <!-- Select Mobil Filter -->
+                <select id="filterFleet" onchange="applyFilters()" class="bg-slate-50 border border-slate-300 text-slate-700 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 p-2.5 flex-1 sm:w-48">
+                    <option value="ALL">Semua Mobil (Armada)</option>
+                </select>
+                <!-- Filter Rentang Waktu -->
+                <select id="filterPeriod" onchange="applyFilters()" class="bg-slate-50 border border-slate-300 text-slate-700 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 p-2.5 flex-1 sm:w-40">
+                    <option value="ALL">Semua Waktu</option>
+                    <option value="THIS_MONTH" selected>Bulan Ini</option>
+                    <option value="LAST_MONTH">Bulan Lalu</option>
+                    <option value="THIS_YEAR">Tahun Ini</option>
+                </select>
+                <button onclick="resetFilters()" class="p-2.5 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition" title="Reset Filter">
+                    <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+                </button>
+            </div>
+        </section>
+
+        <!-- KPI Cards Summary -->
+        <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <!-- Total Pemasukan -->
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200/80 relative overflow-hidden">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Total Pemasukan</p>
+                        <h3 id="kpiIncome" class="text-2xl font-bold text-emerald-600 mt-1">Rp 0</h3>
+                    </div>
+                    <div class="p-3 bg-emerald-50 text-emerald-600 rounded-xl">
+                        <i data-lucide="trending-up" class="w-6 h-6"></i>
+                    </div>
+                </div>
+                <div class="mt-3 flex items-center text-xs text-slate-400">
+                    <span id="kpiIncomeCount" class="font-medium text-slate-600">0</span>&nbsp;transaksi pemasukan
+                </div>
+            </div>
+
+            <!-- Total Pengeluaran -->
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200/80 relative overflow-hidden">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Total Pengeluaran</p>
+                        <h3 id="kpiExpense" class="text-2xl font-bold text-rose-600 mt-1">Rp 0</h3>
+                    </div>
+                    <div class="p-3 bg-rose-50 text-rose-600 rounded-xl">
+                        <i data-lucide="trending-down" class="w-6 h-6"></i>
+                    </div>
+                </div>
+                <div class="mt-3 flex items-center text-xs text-slate-400">
+                    <span id="kpiExpenseCount" class="font-medium text-slate-600">0</span>&nbsp;transaksi pengeluaran
+                </div>
+            </div>
+
+            <!-- Laba / Rugi Bersih -->
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200/80 relative overflow-hidden">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Laba / Rugi Bersih</p>
+                        <h3 id="kpiNetProfit" class="text-2xl font-bold text-slate-800 mt-1">Rp 0</h3>
+                    </div>
+                    <div id="kpiNetIconBg" class="p-3 bg-indigo-50 text-indigo-600 rounded-xl">
+                        <i data-lucide="wallet" class="w-6 h-6"></i>
+                    </div>
+                </div>
+                <div class="mt-3 flex items-center text-xs text-slate-400">
+                    <span id="kpiMargin" class="font-medium text-slate-600">0%</span>&nbsp;margin keuntungan
+                </div>
+            </div>
+
+            <!-- Total Armada -->
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200/80 relative overflow-hidden">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Armada Aktif</p>
+                        <h3 id="kpiTotalCars" class="text-2xl font-bold text-slate-800 mt-1">0 Mobil</h3>
+                    </div>
+                    <div class="p-3 bg-blue-50 text-blue-600 rounded-xl">
+                        <i data-lucide="car" class="w-6 h-6"></i>
+                    </div>
+                </div>
+                <div class="mt-3 flex items-center justify-between text-xs text-slate-400">
+                    <span>Kelola & Riwayat Mobil</span>
+                    <button onclick="openModal('carListModal')" class="text-indigo-600 font-semibold hover:underline">Lihat List</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Analytics & Visualization Section -->
+        <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Main Chart: Bar Chart Comparison -->
+            <div class="lg:col-span-2 bg-white p-5 rounded-xl shadow-sm border border-slate-200/80">
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <h2 class="text-base font-bold text-slate-800">Pemasukan vs Pengeluaran</h2>
+                        <p class="text-xs text-slate-500">Perbandingan riwayat keuangan bulanan</p>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span class="inline-flex items-center text-xs text-emerald-600 font-medium">
+                            <span class="w-2.5 h-2.5 bg-emerald-500 rounded-full mr-1"></span> Pemasukan
+                        </span>
+                        <span class="inline-flex items-center text-xs text-rose-600 font-medium">
+                            <span class="w-2.5 h-2.5 bg-rose-500 rounded-full mr-1"></span> Pengeluaran
+                        </span>
+                    </div>
+                </div>
+                <div class="h-64 sm:h-72">
+                    <canvas id="monthlyChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Doughnut Chart: Expense Breakdown -->
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200/80">
+                <div class="mb-4">
+                    <h2 class="text-base font-bold text-slate-800">Distribusi Pengeluaran</h2>
+                    <p class="text-xs text-slate-500">Berdasarkan kategori biaya armada</p>
+                </div>
+                <div class="h-64 sm:h-72 relative flex items-center justify-center">
+                    <canvas id="categoryChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- Transaction Table Section -->
+        <section class="bg-white rounded-xl shadow-sm border border-slate-200/80 overflow-hidden">
+            <!-- Table Header Controls -->
+            <div class="p-5 border-b border-slate-100 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                <div>
+                    <h2 class="text-base font-bold text-slate-800">Histori Transaksi</h2>
+                    <p class="text-xs text-slate-500">Daftar rinci catatan masuk dan keluar biaya mobil</p>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-2 w-full md:w-auto">
+                    <!-- Search input -->
+                    <div class="relative flex-1 sm:w-64">
+                        <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400"></i>
+                        <input type="text" id="searchKeyword" onkeyup="applyTableFilters()" placeholder="Cari catatan / plat..." class="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-300 text-slate-700 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <!-- Type Filter -->
+                    <select id="filterType" onchange="applyTableFilters()" class="bg-slate-50 border border-slate-300 text-slate-700 text-sm rounded-lg p-2">
+                        <option value="ALL">Semua Tipe</option>
+                        <option value="INCOME">Pemasukan</option>
+                        <option value="EXPENSE">Pengeluaran</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Table -->
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-50 text-slate-500 text-xs uppercase font-semibold border-b border-slate-200">
+                            <th class="p-4">Tanggal</th>
+                            <th class="p-4">Mobil / Plat</th>
+                            <th class="p-4">Tipe</th>
+                            <th class="p-4">Kategori</th>
+                            <th class="p-4">Keterangan</th>
+                            <th class="p-4 text-right">Jumlah</th>
+                            <th class="p-4 text-center">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="transactionTableBody" class="divide-y divide-slate-100 text-sm">
+                        <!-- Dynamic rows insertion -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Table Footer Pagination/Info -->
+            <div id="tableFooter" class="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+                <span id="transactionCountInfo">Menampilkan 0 transaksi</span>
+                <span>Format Mata Uang: Rupiah (IDR)</span>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Modal: Tambah Transaksi Baru -->
+    <div id="addTransactionModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden transform transition-all">
+            <div class="p-5 bg-slate-900 text-white flex items-center justify-between">
+                <h3 class="font-bold text-lg flex items-center space-x-2">
+                    <i data-lucide="plus-circle" class="w-5 h-5 text-indigo-400"></i>
+                    <span>Catat Transaksi Keuangan</span>
+                </h3>
+                <button onclick="closeModal('addTransactionModal')" class="text-slate-400 hover:text-white">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <form id="transactionForm" onsubmit="handleSaveTransaction(event)" class="p-6 space-y-4">
+                <!-- Tipe Transaksi -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-2">Tipe Transaksi</label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <label class="border rounded-xl p-3 flex items-center justify-center space-x-2 cursor-pointer hover:bg-emerald-50 border-slate-200 has-[:checked]:border-emerald-500 has-[:checked]:bg-emerald-50 has-[:checked]:text-emerald-700 font-medium text-slate-700 transition">
+                            <input type="radio" name="txType" value="INCOME" checked onchange="updateCategoryOptions()" class="hidden">
+                            <i data-lucide="arrow-down-left" class="w-4 h-4 text-emerald-600"></i>
+                            <span>Pemasukan</span>
+                        </label>
+                        <label class="border rounded-xl p-3 flex items-center justify-center space-x-2 cursor-pointer hover:bg-rose-50 border-slate-200 has-[:checked]:border-rose-500 has-[:checked]:bg-rose-50 has-[:checked]:text-rose-700 font-medium text-slate-700 transition">
+                            <input type="radio" name="txType" value="EXPENSE" onchange="updateCategoryOptions()" class="hidden">
+                            <i data-lucide="arrow-up-right" class="w-4 h-4 text-rose-600"></i>
+                            <span>Pengeluaran</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Tanggal & Pilih Mobil -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Tanggal</label>
+                        <input type="date" id="txDate" required class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Pilih Mobil</label>
+                        <select id="txCarId" required class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-indigo-500 focus:border-indigo-500">
+                            <!-- Populated dynamically -->
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Kategori & Nominal -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Kategori</label>
+                        <select id="txCategory" required class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-indigo-500 focus:border-indigo-500">
+                            <!-- Populated based on type -->
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Nominal (Rp)</label>
+                        <input type="number" id="txAmount" min="0" placeholder="Contoh: 250000" required class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                </div>
+
+                <!-- Keterangan / Catatan -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Keterangan / Catatan</label>
+                    <textarea id="txNotes" rows="2" placeholder="Catatan opsional (misal: isi bensin Shell Kembangan, servis rutin 10rb km)" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-indigo-500 focus:border-indigo-500"></textarea>
+                </div>
+
+                <div class="pt-2 flex justify-end space-x-3">
+                    <button type="button" onclick="closeModal('addTransactionModal')" class="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg font-medium transition">Batal</button>
+                    <button type="submit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg shadow transition">Simpan Transaksi</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Tambah Mobil Baru -->
+    <div id="addCarModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden transform transition-all">
+            <div class="p-5 bg-slate-900 text-white flex items-center justify-between">
+                <h3 class="font-bold text-lg flex items-center space-x-2">
+                    <i data-lucide="car" class="w-5 h-5 text-indigo-400"></i>
+                    <span>Tambah Armada Mobil</span>
+                </h3>
+                <button onclick="closeModal('addCarModal')" class="text-slate-400 hover:text-white">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <form id="carForm" onsubmit="handleSaveCar(event)" class="p-6 space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Nama / Tipe Mobil</label>
+                    <input type="text" id="carName" placeholder="Contoh: Toyota Avanza, Honda CR-V" required class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Plat Nomor</label>
+                    <input type="text" id="carPlate" placeholder="Contoh: B 1234 CD" required class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Tahun Kendaraan</label>
+                    <input type="number" id="carYear" placeholder="2022" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+
+                <div class="pt-2 flex justify-end space-x-3">
+                    <button type="button" onclick="closeModal('addCarModal')" class="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg font-medium transition">Batal</button>
+                    <button type="submit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg shadow transition">Tambah Mobil</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Kelola / Daftar Mobil -->
+    <div id="carListModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden transform transition-all flex flex-col max-h-[80vh]">
+            <div class="p-5 bg-slate-900 text-white flex items-center justify-between">
+                <h3 class="font-bold text-lg flex items-center space-x-2">
+                    <i data-lucide="list" class="w-5 h-5 text-indigo-400"></i>
+                    <span>Daftar Armada Mobil Terdaftar</span>
+                </h3>
+                <button onclick="closeModal('carListModal')" class="text-slate-400 hover:text-white">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <div class="p-6 overflow-y-auto flex-grow">
+                <div class="divide-y divide-slate-100" id="carListContainer">
+                    <!-- Dynamic car list -->
+                </div>
+            </div>
+            <div class="p-4 bg-slate-50 border-t border-slate-100 flex justify-between items-center">
+                <button onclick="closeModal('carListModal'); openModal('addCarModal');" class="text-xs font-semibold text-indigo-600 hover:underline flex items-center space-x-1">
+                    <i data-lucide="plus" class="w-4 h-4"></i>
+                    <span>Tambah Mobil Baru</span>
+                </button>
+                <button onclick="closeModal('carListModal')" class="px-4 py-2 bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg hover:bg-slate-300">Tutup</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Message Toast (Replaces Alert) -->
+    <div id="toastNotification" class="fixed bottom-5 right-5 bg-slate-800 text-white px-4 py-3 rounded-xl shadow-lg transform translate-y-20 opacity-0 transition-all duration-300 flex items-center space-x-3 z-50 pointer-events-none">
+        <i data-lucide="info" id="toastIcon" class="w-5 h-5 text-indigo-400"></i>
+        <span id="toastMessage" class="text-sm font-medium">Notifikasi</span>
+    </div>
+
+    <script>
+        // Default Master Categories
+        const CATEGORIES = {
+            INCOME: [
+                "Sewa / Rental Harian",
+                "Sewa / Rental Bulanan",
+                "Hasil Operasional Taksi/Layanan",
+                "Penjualan Aset/Komponen",
+                "Lain-lain (Pemasukan)"
+            ],
+            EXPENSE: [
+                "Bensin / BBM",
+                "Servis & Maintenance",
+                "Pajak / STNK",
+                "Asuransi",
+                "Cuci & Perawatan",
+                "Tol & Parkir",
+                "Sparepart & Ban",
+                "Lain-lain (Pengeluaran)"
+            ]
+        };
+
+        // Initial Sample Data (Armada Mobil)
+        let cars = [
+            { id: "car-1", name: "Toyota Avanza Veloz", plate: "B 1420 KZA", year: 2021 },
+            { id: "car-2", name: "Mitsubishi Xpander", plate: "B 8892 FGH", year: 2022 },
+            { id: "car-3", name: "Honda HR-V", plate: "B 3011 SHL", year: 2020 }
+        ];
+
+        // Dynamic Dates for Initial Data
+        const today = new Date();
+        const formatDate = (offsetDays) => {
+            const d = new Date();
+            d.setDate(today.getDate() - offsetDays);
+            return d.toISOString().split('T')[0];
+        };
+
+        // Initial Sample Transactions
+        let transactions = [
+            { id: "tx-1", date: formatDate(1), carId: "car-1", type: "INCOME", category: "Sewa / Rental Harian", amount: 450000, notes: "Sewa 1 hari Pak Budi" },
+            { id: "tx-2", date: formatDate(2), carId: "car-1", type: "EXPENSE", category: "Bensin / BBM", amount: 200000, notes: "Pertamax 20 liter" },
+            { id: "tx-3", date: formatDate(3), carId: "car-2", type: "INCOME", category: "Sewa / Rental Bulanan", amount: 6500000, notes: "DP Pembayaran Sewa PT ABC" },
+            { id: "tx-4", date: formatDate(4), carId: "car-2", type: "EXPENSE", category: "Servis & Maintenance", amount: 850000, notes: "Ganti oli & filter oli di Bengkel Resmi" },
+            { id: "tx-5", date: formatDate(5), carId: "car-3", type: "INCOME", category: "Sewa / Rental Harian", amount: 600000, notes: "Sewa weekend ke Bandung" },
+            { id: "tx-6", date: formatDate(6), carId: "car-3", type: "EXPENSE", category: "Cuci & Perawatan", amount: 50000, notes: "Cuci hidrolik bersih luar dalam" },
+            { id: "tx-7", date: formatDate(12), carId: "car-1", type: "EXPENSE", category: "Pajak / STNK", amount: 2800000, notes: "Bayar Pajak Tahunan STNK" },
+            { id: "tx-8", date: formatDate(15), carId: "car-2", type: "EXPENSE", category: "Tol & Parkir", amount: 120000, notes: "Operasional antar jemput bandara" }
+        ];
+
+        // Chart Instance References
+        let monthlyChartInstance = null;
+        let categoryChartInstance = null;
+
+        // Initialize App on DOM Load
+        window.addEventListener('DOMContentLoaded', () => {
+            // Set default date picker to today
+            document.getElementById('txDate').value = today.toISOString().split('T')[0];
+
+            // Render Initial Dynamic Data
+            populateCarDropdowns();
+            updateCategoryOptions();
+            renderDashboard();
+
+            // Initialize Lucide Icons
+            lucide.createIcons();
+        });
+
+        // Helper: Format Rupiah Currency
+        function formatRP(num) {
+            return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num);
+        }
+
+        // Show Toast Notification
+        function showToast(message, isError = false) {
+            const toast = document.getElementById('toastNotification');
+            const toastMsg = document.getElementById('toastMessage');
+            const toastIcon = document.getElementById('toastIcon');
+
+            toastMsg.innerText = message;
+            if (isError) {
+                toastIcon.setAttribute('data-lucide', 'alert-circle');
+                toast.classList.replace('bg-slate-800', 'bg-rose-700');
+            } else {
+                toastIcon.setAttribute('data-lucide', 'check-circle-2');
+                toast.classList.replace('bg-rose-700', 'bg-slate-800');
+            }
+            lucide.createIcons();
+
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        }
+
+        // Modal Helpers
+        function openModal(modalId) {
+            document.getElementById(modalId).classList.remove('hidden');
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.add('hidden');
+        }
+
+        // Dynamic update category options based on type
+        function updateCategoryOptions() {
+            const typeVal = document.querySelector('input[name="txType"]:checked').value;
+            const catSelect = document.getElementById('txCategory');
+            catSelect.innerHTML = '';
+
+            CATEGORIES[typeVal].forEach(cat => {
+                const opt = document.createElement('option');
+                opt.value = cat;
+                opt.textContent = cat;
+                catSelect.appendChild(opt);
+            });
+        }
+
+        // Populate Car Selection Dropdowns
+        function populateCarDropdowns() {
+            const filterFleet = document.getElementById('filterFleet');
+            const txCarId = document.getElementById('txCarId');
+
+            // Save active selections
+            const selectedFleetFilter = filterFleet.value;
+            
+            // Clear items
+            filterFleet.innerHTML = '<option value="ALL">Semua Mobil (Armada)</option>';
+            txCarId.innerHTML = '';
+
+            cars.forEach(car => {
+                // Main Filter
+                const opt1 = document.createElement('option');
+                opt1.value = car.id;
+                opt1.textContent = `${car.name} (${car.plate})`;
+                filterFleet.appendChild(opt1);
+
+                // Modal Form
+                const opt2 = document.createElement('option');
+                opt2.value = car.id;
+                opt2.textContent = `${car.name} - ${car.plate}`;
+                txCarId.appendChild(opt2);
+            });
+
+            if(selectedFleetFilter && cars.some(c => c.id === selectedFleetFilter)) {
+                filterFleet.value = selectedFleetFilter;
+            } else {
+                filterFleet.value = "ALL";
+            }
+
+            renderCarListModal();
+        }
+
+        // Render Car List inside Car Modal
+        function renderCarListModal() {
+            const container = document.getElementById('carListContainer');
+            if (cars.length === 0) {
+                container.innerHTML = `<div class="text-center py-6 text-slate-400">Belum ada armada mobil terdaftar.</div>`;
+                return;
+            }
+
+            container.innerHTML = cars.map(car => {
+                const carTxCount = transactions.filter(t => t.carId === car.id).length;
+                return `
+                    <div class="py-3 flex items-center justify-between">
+                        <div class="flex items-center space-x-3">
+                            <div class="p-2.5 bg-slate-100 rounded-lg text-slate-700">
+                                <i data-lucide="car" class="w-5 h-5"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-slate-800 text-sm">${car.name}</h4>
+                                <div class="flex items-center space-x-2 text-xs text-slate-500">
+                                    <span class="bg-slate-100 text-slate-700 font-mono px-1.5 py-0.5 rounded font-semibold border border-slate-200">${car.plate}</span>
+                                    <span>Tahun ${car.year || '-'}</span>
+                                    <span>• ${carTxCount} transaksi</span>
+                                </div>
+                            </div>
+                        </div>
+                        <button onclick="handleDeleteCar('${car.id}')" class="text-slate-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 transition" title="Hapus Mobil">
+                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                `;
+            }).join('');
+            lucide.createIcons();
+        }
+
+        // Filtering Core Function
+        function getFilteredTransactions() {
+            const fleetFilter = document.getElementById('filterFleet').value;
+            const periodFilter = document.getElementById('filterPeriod').value;
+            const typeFilter = document.getElementById('filterType').value;
+            const keyword = document.getElementById('searchKeyword').value.toLowerCase().trim();
+
+            const now = new Date();
+            const currentMonth = now.getMonth();
+            const currentYear = now.getFullYear();
+
+            return transactions.filter(tx => {
+                const txDate = new Date(tx.date);
+
+                // Fleet Filter
+                if (fleetFilter !== 'ALL' && tx.carId !== fleetFilter) return false;
+
+                // Type Filter
+                if (typeFilter !== 'ALL' && tx.type !== typeFilter) return false;
+
+                // Time Period Filter
+                if (periodFilter === 'THIS_MONTH') {
+                    if (txDate.getMonth() !== currentMonth || txDate.getFullYear() !== currentYear) return false;
+                } else if (periodFilter === 'LAST_MONTH') {
+                    const lastMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+                    const lastMonthYear = currentMonth === 0 ? currentYear - 1 : currentYear;
+                    if (txDate.getMonth() !== lastMonth || txDate.getFullYear() !== lastMonthYear) return false;
+                } else if (periodFilter === 'THIS_YEAR') {
+                    if (txDate.getFullYear() !== currentYear) return false;
+                }
+
+                // Keyword Search
+                if (keyword) {
+                    const car = cars.find(c => c.id === tx.carId);
+                    const carName = car ? car.name.toLowerCase() : '';
+                    const carPlate = car ? car.plate.toLowerCase() : '';
+                    const notes = (tx.notes || '').toLowerCase();
+                    const category = tx.category.toLowerCase();
+
+                    const matchSearch = carName.includes(keyword) || 
+                                        carPlate.includes(keyword) || 
+                                        notes.includes(keyword) || 
+                                        category.includes(keyword);
+
+                    if (!matchSearch) return false;
+                }
+
+                return true;
+            });
+        }
+
+        function applyFilters() {
+            renderDashboard();
+        }
+
+        function applyTableFilters() {
+            renderDashboard();
+        }
+
+        function resetFilters() {
+            document.getElementById('filterFleet').value = 'ALL';
+            document.getElementById('filterPeriod').value = 'THIS_MONTH';
+            document.getElementById('filterType').value = 'ALL';
+            document.getElementById('searchKeyword').value = '';
+            renderDashboard();
+            showToast("Filter berhasil di-reset");
+        }
+
+        // Main Dashboard Render
+        function renderDashboard() {
+            const filteredData = getFilteredTransactions();
+
+            // Calculate KPI Values
+            let totalIncome = 0;
+            let totalExpense = 0;
+            let incomeCount = 0;
+            let expenseCount = 0;
+
+            filteredData.forEach(tx => {
+                if (tx.type === 'INCOME') {
+                    totalIncome += Number(tx.amount);
+                    incomeCount++;
+                } else {
+                    totalExpense += Number(tx.amount);
+                    expenseCount++;
+                }
+            });
+
+            const netProfit = totalIncome - totalExpense;
+            const margin = totalIncome > 0 ? ((netProfit / totalIncome) * 100).toFixed(1) : 0;
+
+            // DOM Updates for KPIs
+            document.getElementById('kpiIncome').textContent = formatRP(totalIncome);
+            document.getElementById('kpiIncomeCount').textContent = incomeCount;
+
+            document.getElementById('kpiExpense').textContent = formatRP(totalExpense);
+            document.getElementById('kpiExpenseCount').textContent = expenseCount;
+
+            const netProfitEl = document.getElementById('kpiNetProfit');
+            netProfitEl.textContent = formatRP(netProfit);
+            if (netProfit < 0) {
+                netProfitEl.className = "text-2xl font-bold text-rose-600 mt-1";
+            } else {
+                netProfitEl.className = "text-2xl font-bold text-emerald-600 mt-1";
+            }
+
+            document.getElementById('kpiMargin').textContent = `${margin}%`;
+            document.getElementById('kpiTotalCars').textContent = `${cars.length} Mobil`;
+
+            // Render Table & Charts
+            renderTransactionTable(filteredData);
+            renderCharts(filteredData);
+        }
+
+        // Render Transaction Table Rows
+        function renderTransactionTable(data) {
+            const tbody = document.getElementById('transactionTableBody');
+            const countInfo = document.getElementById('transactionCountInfo');
+
+            countInfo.textContent = `Menampilkan ${data.length} dari ${transactions.length} total transaksi`;
+
+            if (data.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="p-8 text-center text-slate-400">
+                            <i data-lucide="inbox" class="w-10 h-10 mx-auto mb-2 stroke-1"></i>
+                            <p>Tidak ada catatan transaksi yang sesuai filter.</p>
+                        </td>
+                    </tr>
+                `;
+                lucide.createIcons();
+                return;
+            }
+
+            // Sort newest first
+            const sorted = [...data].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            tbody.innerHTML = sorted.map(tx => {
+                const car = cars.find(c => c.id === tx.carId) || { name: 'Mobil Dihapus', plate: '-' };
+                const isIncome = tx.type === 'INCOME';
+
+                return `
+                    <tr class="hover:bg-slate-50/80 transition">
+                        <td class="p-4 text-slate-600 whitespace-nowrap font-medium text-xs sm:text-sm">
+                            ${tx.date}
+                        </td>
+                        <td class="p-4 whitespace-nowrap">
+                            <div class="font-semibold text-slate-800 text-sm">${car.name}</div>
+                            <div class="text-xs text-slate-500 font-mono">${car.plate}</div>
+                        </td>
+                        <td class="p-4 whitespace-nowrap">
+                            ${isIncome 
+                                ? `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800"><i data-lucide="arrow-down-left" class="w-3 h-3 mr-1"></i>Pemasukan</span>`
+                                : `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-rose-100 text-rose-800"><i data-lucide="arrow-up-right" class="w-3 h-3 mr-1"></i>Pengeluaran</span>`
+                            }
+                        </td>
+                        <td class="p-4 whitespace-nowrap text-slate-700 text-sm">
+                            ${tx.category}
+                        </td>
+                        <td class="p-4 text-slate-500 text-xs sm:text-sm max-w-xs truncate">
+                            ${tx.notes || '<span class="text-slate-300">-</span>'}
+                        </td>
+                        <td class="p-4 text-right whitespace-nowrap font-bold text-sm ${isIncome ? 'text-emerald-600' : 'text-rose-600'}">
+                            ${isIncome ? '+' : '-'} ${formatRP(tx.amount)}
+                        </td>
+                        <td class="p-4 text-center whitespace-nowrap">
+                            <button onclick="handleDeleteTransaction('${tx.id}')" class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition" title="Hapus Catatan">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+
+            lucide.createIcons();
+        }
+
+        // Chart.js Rendering logic
+        function renderCharts(filteredData) {
+            // 1. Monthly Bar Chart Data
+            const months = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agt", "Sep", "Okt", "Nov", "Des"];
+            const incomePerMonth = new Array(12).fill(0);
+            const expensePerMonth = new Array(12).fill(0);
+
+            filteredData.forEach(tx => {
+                const monthIdx = new Date(tx.date).getMonth();
+                if (tx.type === 'INCOME') {
+                    incomePerMonth[monthIdx] += Number(tx.amount);
+                } else {
+                    expensePerMonth[monthIdx] += Number(tx.amount);
+                }
+            });
+
+            // Destroy existing chart instance if present
+            if (monthlyChartInstance) monthlyChartInstance.destroy();
+
+            const monthlyCtx = document.getElementById('monthlyChart').getContext('2d');
+            monthlyChartInstance = new Chart(monthlyCtx, {
+                type: 'bar',
+                data: {
+                    labels: months,
+                    datasets: [
+                        {
+                            label: 'Pemasukan',
+                            data: incomePerMonth,
+                            backgroundColor: '#10b981',
+                            borderRadius: 6,
+                        },
+                        {
+                            label: 'Pengeluaran',
+                            data: expensePerMonth,
+                            backgroundColor: '#f43f5e',
+                            borderRadius: 6,
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: (context) => ` ${context.dataset.label}: ${formatRP(context.raw)}`
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: (value) => 'Rp ' + (value / 1000) + 'rb'
+                            },
+                            grid: { color: '#f1f5f9' }
+                        },
+                        x: {
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+
+            // 2. Category Doughnut Chart Data (Expenses Breakdown)
+            const expenseCategories = {};
+            filteredData.filter(t => t.type === 'EXPENSE').forEach(tx => {
+                expenseCategories[tx.category] = (expenseCategories[tx.category] || 0) + Number(tx.amount);
+            });
+
+            const catLabels = Object.keys(expenseCategories);
+            const catData = Object.values(expenseCategories);
+
+            if (categoryChartInstance) categoryChartInstance.destroy();
+
+            const categoryCtx = document.getElementById('categoryChart').getContext('2d');
+            
+            if (catData.length === 0) {
+                // Empty state donut placeholder
+                categoryChartInstance = new Chart(categoryCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Belum ada pengeluaran'],
+                        datasets: [{ data: [1], backgroundColor: ['#e2e8f0'] }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { position: 'bottom' }, tooltip: { enabled: false } }
+                    }
+                });
+            } else {
+                categoryChartInstance = new Chart(categoryCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: catLabels,
+                        datasets: [{
+                            data: catData,
+                            backgroundColor: [
+                                '#f43f5e', '#3b82f6', '#f59e0b', '#10b981', 
+                                '#8b5cf6', '#ec4899', '#06b6d4', '#64748b'
+                            ],
+                            borderWidth: 2,
+                            borderColor: '#ffffff'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { 
+                                position: 'bottom',
+                                labels: { boxWidth: 12, font: { size: 11 } }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: (context) => ` ${context.label}: ${formatRP(context.raw)}`
+                                }
+                            }
+                        },
+                        cutout: '65%'
+                    }
+                });
+            }
+        }
+
+        // Add Transaction Submit
+        function handleSaveTransaction(e) {
+            e.preventDefault();
+
+            const type = document.querySelector('input[name="txType"]:checked').value;
+            const date = document.getElementById('txDate').value;
+            const carId = document.getElementById('txCarId').value;
+            const category = document.getElementById('txCategory').value;
+            const amount = parseFloat(document.getElementById('txAmount').value);
+            const notes = document.getElementById('txNotes').value;
+
+            if (!carId) {
+                showToast("Silakan tambahkan mobil terlebih dahulu", true);
+                return;
+            }
+
+            const newTx = {
+                id: 'tx-' + Date.now(),
+                date,
+                carId,
+                type,
+                category,
+                amount,
+                notes
+            };
+
+            transactions.unshift(newTx);
+            closeModal('addTransactionModal');
+            document.getElementById('transactionForm').reset();
+            document.getElementById('txDate').value = today.toISOString().split('T')[0];
+            updateCategoryOptions();
+
+            renderDashboard();
+            showToast("Transaksi berhasil dicatat!");
+        }
+
+        // Delete Transaction
+        function handleDeleteTransaction(txId) {
+            transactions = transactions.filter(t => t.id !== txId);
+            renderDashboard();
+            showToast("Catatan transaksi berhasil dihapus");
+        }
+
+        // Add Car Submit
+        function handleSaveCar(e) {
+            e.preventDefault();
+
+            const name = document.getElementById('carName').value.trim();
+            const plate = document.getElementById('carPlate').value.trim().toUpperCase();
+            const year = document.getElementById('carYear').value;
+
+            const newCar = {
+                id: 'car-' + Date.now(),
+                name,
+                plate,
+                year: year ? parseInt(year) : '-'
+            };
+
+            cars.push(newCar);
+            populateCarDropdowns();
+            closeModal('addCarModal');
+            document.getElementById('carForm').reset();
+
+            renderDashboard();
+            showToast(`Mobil ${name} (${plate}) berhasil ditambahkan!`);
+        }
+
+        // Delete Car
+        function handleDeleteCar(carId) {
+            const hasTx = transactions.some(t => t.carId === carId);
+            if (hasTx) {
+                showToast("Mobil tidak dapat dihapus karena memiliki riwayat transaksi!", true);
+                return;
+            }
+
+            cars = cars.filter(c => c.id !== carId);
+            populateCarDropdowns();
+            renderDashboard();
+            showToast("Mobil berhasil dihapus dari armada");
+        }
+    </script>
+</body>
+</html>
