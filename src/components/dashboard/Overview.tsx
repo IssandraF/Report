@@ -2,11 +2,25 @@
 
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, CartesianGrid } from "recharts"
 
+interface OverviewDataItem {
+  name: string
+  Pemasukan: number
+  Pengeluaran: number
+}
+
 interface OverviewProps {
-  data: any[]
+  data: OverviewDataItem[]
 }
 
 export function Overview({ data }: OverviewProps) {
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('id-ID', {
+      style: 'currency',
+      currency: 'IDR',
+      minimumFractionDigits: 0,
+    }).format(value)
+  }
+
   return (
     <ResponsiveContainer width="100%" height={350}>
       <BarChart data={data}>
@@ -23,10 +37,13 @@ export function Overview({ data }: OverviewProps) {
           fontSize={12}
           tickLine={false}
           axisLine={false}
-          tickFormatter={(value) => `Rp${(value / 1000000).toFixed(0)}M`}
+          tickFormatter={(value: number) => `Rp${(value / 1000000).toFixed(0)}Jt`}
         />
         <Tooltip 
-          formatter={(value: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(value)}
+          formatter={(value: any) => [
+            typeof value === 'number' ? formatCurrency(value) : value,
+            ''
+          ]}
         />
         <Legend />
         <Bar dataKey="Pemasukan" fill="#16a34a" radius={[4, 4, 0, 0]} />

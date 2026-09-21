@@ -65,7 +65,6 @@ export default function DashboardClient() {
   }, [])
 
   const handleInstallClick = async () => {
-    // PWA install logic can be complex, just show a toast for demonstration
     toast.info("Gunakan menu browser 'Add to Home Screen' untuk menginstall aplikasi.")
   }
 
@@ -102,7 +101,7 @@ export default function DashboardClient() {
           carId: txCarId,
           type: txType,
           category: txCategory,
-          amount: txAmount.replace(/\D/g, ''), // Strip non-numeric
+          amount: txAmount.replace(/\D/g, ''),
           date: txDate,
           description: txDesc
         })
@@ -129,7 +128,6 @@ export default function DashboardClient() {
     }
   }
 
-  // Format currency
   const formatIDR = (value: number) => {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(value)
   }
@@ -139,20 +137,17 @@ export default function DashboardClient() {
     setTxAmount(value)
   }
 
-  // KPIs calculation
   const totalIncome = transactions.filter(t => t.type === 'INCOME').reduce((sum, t) => sum + t.amount, 0)
   const totalExpense = transactions.filter(t => t.type === 'EXPENSE').reduce((sum, t) => sum + t.amount, 0)
   const netProfit = totalIncome - totalExpense
   const activeCarsCount = cars.filter(c => c.status === 'ACTIVE').length
 
-  // Filtered transactions
   const filteredTransactions = transactions.filter(t => {
-    const matchSearch = t.car.plateNumber.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchSearch = t.car?.plateNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false
     const matchType = filterType === 'ALL' || t.type === filterType
     return matchSearch && matchType
   })
 
-  // Chart data calculation
   const getChartData = () => {
     const monthlyData: Record<string, { name: string, Pemasukan: number, Pengeluaran: number }> = {}
     
@@ -271,7 +266,7 @@ export default function DashboardClient() {
             <form onSubmit={handleAddTransaction} className="space-y-4">
               <div className="grid gap-2">
                 <Label>Pilih Mobil</Label>
-                <Select value={txCarId} onValueChange={setTxCarId} required>
+                <Select value={txCarId} onValueChange={(val) => setTxCarId(val ?? "")} required>
                   <SelectTrigger>
                     <SelectValue placeholder="Pilih armada...">
                       {txCarId ? (() => {
@@ -295,7 +290,7 @@ export default function DashboardClient() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
                   <Label>Tipe Transaksi</Label>
-                  <Select value={txType} onValueChange={setTxType}>
+                  <Select value={txType} onValueChange={(val) => setTxType(val ?? "INCOME")}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -307,7 +302,7 @@ export default function DashboardClient() {
                 </div>
                 <div className="grid gap-2">
                   <Label>Kategori</Label>
-                  <Select value={txCategory} onValueChange={setTxCategory} required>
+                  <Select value={txCategory} onValueChange={(val) => setTxCategory(val ?? "")} required>
                     <SelectTrigger>
                       <SelectValue placeholder="Kategori" />
                     </SelectTrigger>
@@ -360,7 +355,7 @@ export default function DashboardClient() {
               onChange={e => setSearchTerm(e.target.value)}
               className="max-w-sm"
             />
-            <Select value={filterType} onValueChange={setFilterType}>
+            <Select value={filterType} onValueChange={(val) => setFilterType(val ?? "ALL")}>
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Semua Tipe" />
               </SelectTrigger>
@@ -390,7 +385,7 @@ export default function DashboardClient() {
                   filteredTransactions.map(t => (
                     <TableRow key={t.id}>
                       <TableCell>{format(new Date(t.date), 'dd MMM yyyy')}</TableCell>
-                      <TableCell className="font-medium">{t.car.plateNumber}</TableCell>
+                      <TableCell className="font-medium">{t.car?.plateNumber ?? "-"}</TableCell>
                       <TableCell>
                         <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${t.type === 'INCOME' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
                           {t.type === 'INCOME' ? 'Pemasukan' : 'Pengeluaran'}
