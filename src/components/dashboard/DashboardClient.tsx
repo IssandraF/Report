@@ -20,7 +20,7 @@ export default function DashboardClient() {
   const [isCarModalOpen, setIsCarModalOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
   const [filterType, setFilterType] = useState("ALL")
-  
+
   // Transaction Form State
   const [txCarId, setTxCarId] = useState("")
   const [txType, setTxType] = useState("INCOME")
@@ -44,11 +44,11 @@ export default function DashboardClient() {
       ])
       const carsData = await carsRes.json()
       const txData = await txRes.json()
-      
+
       if (!carsRes.ok || !txRes.ok) {
         throw new Error("API returned an error. Ensure database is connected and migrated.")
       }
-      
+
       setCars(Array.isArray(carsData) ? carsData : [])
       setTransactions(Array.isArray(txData) ? txData : [])
     } catch (error) {
@@ -71,7 +71,7 @@ export default function DashboardClient() {
   const handleAddCar = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!newCarPlate || !newCarBrand) return toast.error("Isi semua field!")
-    
+
     try {
       const res = await fetch('/api/cars', {
         method: 'POST',
@@ -92,7 +92,7 @@ export default function DashboardClient() {
   const handleAddTransaction = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!txCarId || !txCategory || !txAmount || !txDate) return toast.error("Isi semua field wajib!")
-    
+
     try {
       const res = await fetch('/api/transactions', {
         method: 'POST',
@@ -150,7 +150,7 @@ export default function DashboardClient() {
 
   const getChartData = () => {
     const monthlyData: Record<string, { name: string, Pemasukan: number, Pengeluaran: number }> = {}
-    
+
     transactions.forEach(t => {
       const month = format(new Date(t.date), 'MMM yyyy')
       if (!monthlyData[month]) {
@@ -159,7 +159,7 @@ export default function DashboardClient() {
       if (t.type === 'INCOME') monthlyData[month].Pemasukan += t.amount
       else monthlyData[month].Pengeluaran += t.amount
     })
-    
+
     return Object.values(monthlyData).reverse()
   }
 
@@ -228,16 +228,16 @@ export default function DashboardClient() {
             {transactions.length > 0 ? <Overview data={getChartData()} /> : <p className="text-center text-muted-foreground py-10">Belum ada data transaksi</p>}
           </CardContent>
         </Card>
-        
+
         <Card className="col-span-4 lg:col-span-3">
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
-              <CardTitle>Input Transaksi Cepat</CardTitle>
-              <CardDescription>Catat pemasukan atau pengeluaran armada.</CardDescription>
+              <CardTitle>Tambahkan Armada</CardTitle>
+              <CardDescription>Daftarkan armada baru</CardDescription>
             </div>
             <Dialog open={isCarModalOpen} onOpenChange={setIsCarModalOpen}>
               <DialogTrigger className={buttonVariants({ variant: "outline", size: "icon" })}>
-                  <Plus className="h-4 w-4" />
+                <Plus className="h-4 w-4" />
               </DialogTrigger>
               <DialogContent>
                 <form onSubmit={handleAddCar}>
@@ -262,6 +262,10 @@ export default function DashboardClient() {
               </DialogContent>
             </Dialog>
           </CardHeader>
+          <div className="ml-4">
+            <CardTitle>Input Transaksi Cepat</CardTitle>
+            <CardDescription>Catat pemasukan atau pengeluaran armada.</CardDescription>
+          </div>
           <CardContent>
             <form onSubmit={handleAddTransaction} className="space-y-4">
               <div className="grid gap-2">
@@ -317,12 +321,12 @@ export default function DashboardClient() {
 
               <div className="grid gap-2">
                 <Label>Nominal (Rp)</Label>
-                <Input 
-                  type="text" 
-                  placeholder="100.000" 
+                <Input
+                  type="text"
+                  placeholder="100.000"
                   value={txAmount ? parseInt(txAmount).toLocaleString('id-ID') : ''}
                   onChange={handleAmountChange}
-                  required 
+                  required
                 />
               </div>
 
@@ -341,80 +345,6 @@ export default function DashboardClient() {
           </CardContent>
         </Card>
       </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Histori Transaksi</CardTitle>
-          <CardDescription>Daftar seluruh transaksi yang masuk ke dalam sistem.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col sm:flex-row gap-4 mb-4">
-            <Input 
-              placeholder="Cari Plat Nomor..." 
-              value={searchTerm} 
-              onChange={e => setSearchTerm(e.target.value)}
-              className="max-w-sm"
-            />
-            <Select value={filterType} onValueChange={(val) => setFilterType(val ?? "ALL")}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Semua Tipe" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">Semua Tipe</SelectItem>
-                <SelectItem value="INCOME">Pemasukan</SelectItem>
-                <SelectItem value="EXPENSE">Pengeluaran</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          
-          <div className="rounded-md border overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Tanggal</TableHead>
-                  <TableHead>Plat Nomor</TableHead>
-                  <TableHead>Tipe</TableHead>
-                  <TableHead>Kategori</TableHead>
-                  <TableHead>Nominal</TableHead>
-                  <TableHead>Catatan</TableHead>
-                  <TableHead className="text-right">Aksi</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredTransactions.length > 0 ? (
-                  filteredTransactions.map(t => (
-                    <TableRow key={t.id}>
-                      <TableCell>{format(new Date(t.date), 'dd MMM yyyy')}</TableCell>
-                      <TableCell className="font-medium">{t.car?.plateNumber ?? "-"}</TableCell>
-                      <TableCell>
-                        <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${t.type === 'INCOME' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                          {t.type === 'INCOME' ? 'Pemasukan' : 'Pengeluaran'}
-                        </span>
-                      </TableCell>
-                      <TableCell>{t.category}</TableCell>
-                      <TableCell className={t.type === 'INCOME' ? 'text-green-600 font-medium' : 'text-red-600 font-medium'}>
-                        {formatIDR(t.amount)}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">{t.description || '-'}</TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="icon" onClick={() => handleDeleteTx(t.id)} className="text-red-500 hover:text-red-700 hover:bg-red-50">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={7} className="text-center h-24 text-muted-foreground">
-                      Tidak ada data transaksi ditemukan.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   )
 }

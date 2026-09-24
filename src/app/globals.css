@@ -128,3 +128,22 @@
     @apply font-sans;
   }
 }
+
+/* Utility: hide elements when printing */
+.no-print {
+  @media print {
+    display: none !important;
+  }
+}
+
+/* Print layout */
+@media print {
+  @page {
+    margin: 16mm 12mm;
+    size: A4 portrait;
+  }
+  body {
+    background: white !important;
+    color: black !important;
+  }
+}
